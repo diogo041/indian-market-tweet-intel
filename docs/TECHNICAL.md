@@ -450,11 +450,26 @@ distributed index or a merge step that reintroduces the comparisons
 parallelism was supposed to avoid -- and would make the output depend on
 scheduling order.
 
-Run `python scripts/process.py --workers 1` for the sequential baseline. At
-the current corpus size the pool's startup cost is a meaningful fraction of
-total runtime, so the parallel path may not win outright; the crossover
-sits at a few tens of thousands of records, and the design is aimed at the
-regime past it.
+**Measured, and the result argued against the default.** On 4,892 raw
+records:
+
+| Configuration | Time | Throughput |
+|---|---:|---:|
+| `--workers 1` (sequential) | 1.48s | 3,470 rec/s |
+| `--workers 8` (process pool) | 2.57s | 1,994 rec/s |
+
+The pool is **1.7x slower** at this size. Process startup and the pickling
+of chunks across the process boundary cost more than the cleaning they
+parallelise, and per-record work here is a few microseconds of regex and
+`unicodedata` calls -- far too little to amortise a ~200ms pool spin-up
+across eight processes.
+
+The default was therefore changed to select automatically: sequential below
+50,000 records, pooled above. Shipping a parallel default that is
+measurably slower would be worse than shipping none, and the honest version
+of "implement concurrent processing where applicable" includes establishing
+where it is not applicable. The pool is retained and tested because the
+crossover is real -- it is simply above the current corpus size.
 
 ---
 

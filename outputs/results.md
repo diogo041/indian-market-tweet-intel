@@ -51,7 +51,7 @@
 |---|---:|---:|---:|---:|---:|---|
 | 15m | 16 | -0.226 | 0.400 | -0.389 | 0.137 | 68.8% [44%, 86%] |
 | 30m | 16 | -0.153 | 0.572 | -0.386 | 0.140 | 56.2% [33%, 77%] |
-| 60m | 16 | -0.031 | 0.910 | -0.163 | 0.545 | 81.2% [57%, 93%] |
+| 60m | 16 | -0.032 | 0.906 | -0.180 | 0.506 | 81.2% [57%, 93%] |
 
 **Interpretation.** No correlation reaches significance at the 5% level. Sample sizes here are very small -- a handful of buckets overlap NSE trading hours, because collection covered only part of one session -- so this analysis can detect a strong relationship but cannot rule out a modest one. Point estimates at these sample sizes are not evidence in either direction, and no lag or horizon search was performed, since that would manufacture significance without predictive content. Establishing whether the signal carries information requires collection across multiple sessions.
 
