@@ -26,6 +26,12 @@ Two filters were deliberately omitted after calibration:
 Applying both cost ~92% of retrievable volume in measurement (25 vs 335
 tweets for an identical term group and time window).
 
+The term list was extended after the initial four groups began returning
+over 50% duplicates on later runs. That ratio is the signal that the
+*queries* rather than the *time window* have become the binding
+constraint: once a group's slices are exhausted, adding more slices returns
+tweets already collected, and only new vocabulary opens new coverage.
+
 Queries are emitted in descending order of expected yield, so a run
 truncated by rate limits still captures the densest windows first.
 """
@@ -37,13 +43,25 @@ from datetime import datetime, timedelta, timezone
 IST = timezone(timedelta(hours=5, minutes=30))
 
 TERM_GROUPS: tuple[str, ...] = (
+    # Core indices: highest yield, saturate their slices quickly.
     "(nifty OR nifty50 OR #nifty50)",
     '(banknifty OR "bank nifty" OR #banknifty)',
     "(sensex OR #sensex OR NSE OR BSE)",
     '(intraday OR "option chain" OR "share market" OR "stock market india")',
+    # Flow and expiry vocabulary: FII/DII positioning is closely tracked by
+    # Indian retail accounts and generates its own distinct discussion.
+    "(FII OR DII OR expiry OR #expiryday)",
+    # Options-trading community tags, constrained to index context so the
+    # group does not drift into unrelated global markets.
+    "(#optionstrading OR #optionselling OR #trading) (nifty OR sensex)",
+    # Index heavyweights: single-stock discussion that moves the index but
+    # frequently never names it.
+    "(reliance OR infosys OR tcs OR hdfcbank OR icicibank)",
+    # Broad retail tags, India-constrained.
+    "(#stockmarket OR #sharemarket OR #investing) india",
 )
 
-_MARKET_OPEN_MIN = 9 * 60 + 15   # 09:15 IST
+_MARKET_OPEN_MIN = 9 * 60 + 15    # 09:15 IST
 _MARKET_CLOSE_MIN = 15 * 60 + 30  # 15:30 IST
 _EXTENDED_OPEN_MIN = 7 * 60
 _EXTENDED_CLOSE_MIN = 19 * 60
@@ -103,6 +121,6 @@ def plan(hours_back: int = 24, now: datetime | None = None) -> list[Query]:
             )
         cursor = end
 
-    # densest windows first, most recent first within a priority band
+    # Densest windows first, most recent first within a priority band.
     queries.sort(key=lambda q: (q.priority, -q.start.timestamp()))
     return queries
