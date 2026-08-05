@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+accounts.db          # twscrape sessions — CONTAINS AUTH TOKENS
+cookies.json
+chrome_profile/
+data/raw/
+data/processed/
+!data/samples/       # small committed sample only
+logs/
