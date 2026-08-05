@@ -4,7 +4,7 @@ Three complementary representations, because no single one captures what
 matters in this corpus:
 
   1. Lexicon polarity -- interpretable, domain-specific, but sparse
-     (33.9% of discussion tweets carry a scoreable term).
+     (~34% of discussion tweets carry a scoreable term).
   2. TF-IDF -- dense and unsupervised, catching term co-occurrence the
      hand-built lexicon misses.
   3. Engagement and authority -- non-textual signal about how much weight
@@ -28,16 +28,27 @@ scoring, not for the analysis in this repository.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 
 import numpy as np
 from scipy import sparse
 from sklearn.feature_extraction.text import (
+    ENGLISH_STOP_WORDS,
     HashingVectorizer,
     TfidfVectorizer,
 )
 
 from mkt_intel.signals.lexicon import classify, score_text
+
+_URL_RE = re.compile(r"https?://\S+|t\.co/\S+")
+
+# Domain-specific stopwords. Standard English stopwords are removed for the
+# word-level vectoriser, but t.co URL fragments needed explicit handling:
+# every link-bearing tweet contributes "https", "co", and the bigram
+# "https co", which ranked 2nd, 3rd, and 4th by mean TF-IDF weight before
+# removal despite carrying no information about content.
+_EXTRA_STOPWORDS = frozenset({"https", "http", "co", "amp", "rt"})
 
 
 @dataclass(frozen=True)
@@ -162,20 +173,28 @@ def build_tfidf(
 ) -> tuple[sparse.csr_matrix, TfidfVectorizer, TfidfVectorizer]:
     """Fit word- and character-level TF-IDF and return the stacked matrix.
 
+    URLs are stripped before vectorising. Character n-grams are computed on
+    the stripped text too, since t.co URL character sequences would
+    otherwise produce spurious similarity between unrelated tweets that
+    happen to link somewhere.
+
     `min_df=2` drops terms appearing in a single document, which are almost
     entirely typos and one-off tickers and would otherwise inflate the
     vocabulary without contributing generalisable signal.
     """
+    cleaned = [_URL_RE.sub(" ", t) for t in texts]
+    stop = list(ENGLISH_STOP_WORDS | _EXTRA_STOPWORDS)
+
     word_vec = TfidfVectorizer(
         ngram_range=(1, 2), min_df=2, max_features=max_features,
-        sublinear_tf=True, lowercase=True,
+        sublinear_tf=True, lowercase=True, stop_words=stop,
     )
     char_vec = TfidfVectorizer(
         analyzer="char_wb", ngram_range=(3, 5), min_df=3,
         max_features=max_features, sublinear_tf=True, lowercase=True,
     )
-    word_x = word_vec.fit_transform(texts)
-    char_x = char_vec.fit_transform(texts)
+    word_x = word_vec.fit_transform(cleaned)
+    char_x = char_vec.fit_transform(cleaned)
     return sparse.hstack([word_x, char_x], format="csr"), word_vec, char_vec
 
 
@@ -186,8 +205,9 @@ def build_hashed(texts: list[str], n_features: int = 2 ** 18) -> sparse.csr_matr
     transform is stateless across batches. Term-to-index inspection is
     lost, which is why it is not the default here.
     """
+    cleaned = [_URL_RE.sub(" ", t) for t in texts]
     vec = HashingVectorizer(
         ngram_range=(1, 2), n_features=n_features,
         alternate_sign=False, norm="l2", lowercase=True,
     )
-    return vec.transform(texts)
+    return vec.transform(cleaned)

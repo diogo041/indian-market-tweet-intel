@@ -32,10 +32,10 @@ specific to how Indian retail traders write:
 A frequency analysis of unscored tweets drove one structural decision.
 Among the most common terms in tweets the lexicon could not score were
 `yoy`, `qoq`, `ebitda`, `pat`, and `pbt` -- automated earnings summaries --
-alongside `sebi` and `auction` (regulatory feeds) and `straddle`, `spot`,
-and `expiry` (options mechanics). These are not weakly-worded opinion; they
-are non-directional information. Expanding the sentiment lexicon cannot
-score them and would only add noise, so `classify` separates them instead.
+alongside `sebi` (regulatory feeds) and `straddle`, `spot`, `cas`, and
+`expiry` (market mechanics). These are not weakly-worded opinion; they are
+non-directional information. Expanding the sentiment lexicon cannot score
+them and would only add noise, so `classify` separates them instead.
 Sentiment coverage is then reported against discussion tweets, the subset
 that plausibly carries a view, while the volume of each content type
 remains available as an independent feature.
@@ -150,11 +150,20 @@ _PROMO = re.compile(
     re.IGNORECASE,
 )
 
-# `cas` was removed from the corporate-action pattern after it produced 205
-# of 329 matches, nearly all false positives from hashtag fragments. The
-# same applied to `listing`, `split`, and `penalty`, which occur freely in
-# ordinary market commentary. Over-broad classification is worse than none:
-# it silently removes scoreable tweets from the discussion bucket.
+# Classification patterns. `cas` was initially placed in the corporate-action
+# group, where it produced 205 of 329 matches and distorted the class
+# distribution. Inspecting those tweets showed it is the Closing Auction
+# Session -- NSE's call-auction mechanism for setting the closing price --
+# and belongs with market mechanics. It ranks second only to "nifty" by
+# TF-IDF weight in this corpus, because collection covered the afternoon
+# and CAS speculation dominates the 15:30-15:45 IST window. It is
+# mechanical rather than directional: traders discuss where the auction
+# will print, not where the market is headed.
+#
+# `listing`, `split`, and `penalty` were likewise dropped from the
+# corporate-action group, since they occur freely in ordinary commentary.
+# Over-broad classification is worse than none: it silently removes
+# scoreable tweets from the discussion bucket.
 _EARNINGS = re.compile(
     r"\b(yoy|qoq|ebitda|pat|pbt|revenue|margin|net profit|"
     r"results|q[1-4]fy\d{2}|topline|bottomline)\b", re.IGNORECASE)
@@ -163,7 +172,7 @@ _CORP_ACTION = re.compile(
     r"stock split|delisting)\b", re.IGNORECASE)
 _MECHANICAL = re.compile(
     r"\b(straddle|strangle|spot price|open interest|oi data|"
-    r"vix|max pain|pcr)\b", re.IGNORECASE)
+    r"vix|max pain|pcr|cas|closing auction)\b", re.IGNORECASE)
 
 
 def classify(text: str) -> str:
@@ -202,10 +211,9 @@ def score_text(text: str) -> tuple[float, int, bool]:
     directional call both yield a mean near 0.9, but they are not equally
     informative, and the count is what distinguishes them.
 
-    Promotional tweets are flagged rather than dropped. Tout accounts are a
-    large and structurally distinct share of this corpus, and whether their
-    sentiment carries information is an empirical question for validation,
-    not an assumption to bake in here.
+    Promotional tweets are flagged rather than dropped. Whether tout
+    accounts' sentiment carries information is an empirical question for
+    validation, not an assumption to bake in here.
     """
     is_promo = bool(_PROMO.search(text))
     body = _MENTION.sub(" ", _URL.sub(" ", _HASHTAG.sub(" ", text)))

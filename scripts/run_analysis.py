@@ -1,4 +1,4 @@
-"""End-to-end analysis: processed Parquet in, signals and report out.
+"""End-to-end analysis: processed Parquet in, signals, figures, and report out.
 
 Single entry point so the pipeline is reproducible from a clean clone:
 
@@ -6,8 +6,8 @@ Single entry point so the pipeline is reproducible from a clean clone:
     python scripts/process.py
     python scripts/run_analysis.py
 
-Writes bucket-level signals to Parquet and CSV, a corpus summary, and a
-markdown results report to the outputs directory.
+Writes bucket-level signals to Parquet and CSV, a machine-readable corpus
+summary, a markdown results report, and the figure set.
 """
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ import pyarrow.dataset as ds
 from mkt_intel.signals.aggregate import IST, aggregate, to_records
 from mkt_intel.signals.features import build_tfidf, extract
 from mkt_intel.signals.validate import validate
+from mkt_intel.viz.plots import generate_all
 
 log = logging.getLogger("analysis")
 
@@ -35,6 +36,7 @@ def main() -> None:
     ap.add_argument("--bucket-minutes", type=int, default=15)
     ap.add_argument("--skip-validation", action="store_true",
                     help="skip the yfinance price fetch")
+    ap.add_argument("--skip-figures", action="store_true")
     args = ap.parse_args()
 
     logging.basicConfig(
@@ -95,11 +97,16 @@ def main() -> None:
         for r in results
     ]
 
+    if not args.skip_figures:
+        figures = generate_all(signals, args.data, args.out / "figures")
+        summary["figures"] = [str(p) for p in figures]
+        log.info("wrote %d figures", len(figures))
+
     (args.out / "summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )
     _write_report(args.out / "results.md", summary, live, results)
-    log.info("wrote signals, summary, and report to %s", args.out)
+    log.info("wrote signals, summary, figures, and report to %s", args.out)
 
 
 def _write_report(path: Path, summary: dict, live, results) -> None:
@@ -131,6 +138,8 @@ def _write_report(path: Path, summary: dict, live, results) -> None:
         f"{summary['n_buckets_live']} above the reliability floor "
         "(>=5 tweets and >=3 carrying a scoreable term).",
         "",
+        "![Signal series](figures/signal_series.png)",
+        "",
         "| Time (IST) | Tweets | Scoreable | Signal | 95% CI | Bullish share |",
         "|---|---:|---:|---:|---|---:|",
     ]
@@ -142,7 +151,13 @@ def _write_report(path: Path, summary: dict, live, results) -> None:
             f"{s.bull_share:.0%} [{s.bull_ci_low:.0%}, {s.bull_ci_high:.0%}] |"
         )
 
-    lines += ["", "## Validation against NIFTY 50", ""]
+    lines += [
+        "",
+        "![Bullish share](figures/bull_share.png)",
+        "",
+        "## Validation against NIFTY 50",
+        "",
+    ]
     if not results:
         lines.append(
             "Price validation did not run, or too few buckets overlapped "
@@ -174,8 +189,30 @@ def _write_report(path: Path, summary: dict, live, results) -> None:
             "requires collection across multiple sessions.",
         ]
 
-    lines += ["", "## Top TF-IDF terms", "", "| Term | Mean weight |",
-              "|---|---:|"]
+    lines += [
+        "",
+        "## Corpus characteristics",
+        "",
+        "![Engagement distribution](figures/engagement_distribution.png)",
+        "",
+        "Engagement is power-law distributed, which is why the aggregation "
+        "layer weights by `log1p` of the interaction composite rather than "
+        "raw counts: on a linear scale a single viral tweet would outweigh "
+        "several hundred ordinary ones.",
+        "",
+        "## Downsampling",
+        "",
+        "![LTTB demonstration](figures/lttb_demo.png)",
+        "",
+        "Largest-Triangle-Three-Buckets reduces 100,000 points to 500 "
+        "(99.5% reduction) while retaining an isolated spike that "
+        "every-200th sampling discards at the same point budget.",
+        "",
+        "## Top TF-IDF terms",
+        "",
+        "| Term | Mean weight |",
+        "|---|---:|",
+    ]
     for term, weight in summary["top_tfidf_terms"][:15]:
         lines.append(f"| `{term}` | {weight:.4f} |")
 
