@@ -59,9 +59,31 @@ def plot_signal_series(signals: list[BucketSignal], out: Path) -> Path:
         gridspec_kw={"height_ratios": [3, 1]},
     )
 
-    ax.fill_between(times, lo, hi, alpha=0.18, color=_NEUTRAL,
-                    label="95% bootstrap CI")
-    ax.plot(times, sig, marker="o", ms=4, lw=1.6, color="#0969da",
+    # Insert NaN wherever consecutive live buckets are more than one
+    # bucket-width apart. Without this, matplotlib draws a straight line
+    # across hours with no data -- overnight, and any stretch that fell
+    # below the reliability floor -- which reads as a smooth trend that was
+    # never measured.
+    gap = np.diff([t.timestamp() for t in times])
+    expected = np.median(gap) if len(gap) else 0
+    broken_sig, broken_lo, broken_hi, broken_t = [], [], [], []
+    for i, t in enumerate(times):
+        if i > 0 and expected and gap[i - 1] > expected * 1.5:
+            broken_t.append(t)
+            broken_sig.append(np.nan)
+            broken_lo.append(np.nan)
+            broken_hi.append(np.nan)
+        broken_t.append(t)
+        broken_sig.append(sig[i])
+        broken_lo.append(lo[i])
+        broken_hi.append(hi[i])
+    broken_sig = np.array(broken_sig)
+    broken_lo = np.array(broken_lo)
+    broken_hi = np.array(broken_hi)
+
+    ax.fill_between(broken_t, broken_lo, broken_hi, alpha=0.18,
+                    color=_NEUTRAL, label="95% bootstrap CI")
+    ax.plot(broken_t, broken_sig, marker="o", ms=4, lw=1.6, color="#0969da",
             label="Composite sentiment")
     ax.axhline(0, color=_NEUTRAL, lw=0.8, ls="--")
 

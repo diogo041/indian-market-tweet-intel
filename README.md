@@ -132,6 +132,20 @@ Several design choices depend on how these markets actually trade:
 - **Institutional flow.** FII/DII positioning is closely tracked and widely
   reported by retail accounts, and carries its own directional weight.
 
+## Supporting scripts
+
+`scripts/` also contains the measurement tooling the design rests on:
+
+| Script | Purpose |
+|---|---|
+| `smoke_test.py` | Verifies session cookies work before a long collection run |
+| `calibrate.py` | Measures per-term-group yield for a single time slice |
+| `calibrate2.py` | Compares query variants; this is where the 25-vs-335 filter finding came from |
+
+These are kept rather than deleted because the query design is derived from
+their output, and the reasoning is easier to check against the tool that
+produced it.
+
 ## Testing
 
     python -m pytest tests/ -q     # 30 tests
