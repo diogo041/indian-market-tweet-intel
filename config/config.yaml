@@ -1,0 +1,37 @@
+# Runtime configuration. Values here are defaults; CLI arguments override
+# them. Kept separate from code so that collection scope and signal
+# thresholds can be tuned without editing modules.
+
+collection:
+  hours_back: 24
+  per_query_limit: 300
+  # Slice width in minutes, by market phase. Inversely proportional to
+  # expected tweet density: NSE cash-session hours carry most of the volume.
+  slice_minutes:
+    cash_session: 30      # 09:15-15:30 IST
+    extended: 60          # 07:00-19:00 IST
+    overnight: 120
+    weekend: 120
+
+processing:
+  window_hours: 24
+  batch_size: 5000
+  chunk_size: 1000
+  # Measured crossover: below this, process-pool overhead exceeds the
+  # cleaning work it parallelises.
+  parallel_threshold: 50000
+  near_dup_threshold: 0.85
+  minhash_permutations: 128
+
+signals:
+  bucket_minutes: 15
+  # Buckets below either floor are emitted with a null signal rather than
+  # a noisy one.
+  min_tweets_per_bucket: 5
+  min_scoreable_per_bucket: 3
+  bootstrap_resamples: 1000
+  confidence_level: 0.95
+
+validation:
+  ticker: "^NSEI"
+  horizons_minutes: [15, 30, 60]
