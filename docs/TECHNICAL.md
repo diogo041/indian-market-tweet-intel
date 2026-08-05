@@ -402,6 +402,113 @@ from the full cloud at any realistic figure size.
 
 ---
 
+## 4A. Data structures
+
+Selections and their complexity, for the operations that dominate runtime:
+
+| Structure | Where | Operation | Complexity | Why this one |
+|---|---|---|---|---|
+| `set[int]` | Exact dedup | membership | O(1) avg | Tweet IDs are unique int64; hashing beats any ordered structure, and no ordering is needed |
+| MinHash + LSH | Near-dup | similarity query | O(bands) | Avoids the O(n^2) pairwise comparison a naive scan would need; sublinear in corpus size |
+| `deque` | Process pool | popleft | O(1) | Bounded FIFO of in-flight futures; a list would be O(n) per pop from the front |
+| `dict[str, float]` | Lexicon | term lookup | O(1) | Compiled into a single alternation regex, so scoring is one pass over the text rather than one pass per term |
+| Compiled alternation regex | Lexicon | scan | O(len(text)) | Longest-first ordering makes "short covering" win over "short" without a second pass |
+| `numpy.datetime64[s]` | Bucketing | integer division | O(n) vectorised | Bucket assignment is `ts // width` on an int64 array; no per-element datetime arithmetic |
+| CSR sparse matrix | TF-IDF | storage | O(nnz) | At 1.03% density, dense storage would be ~100x larger for the same information |
+| Fixed-width bin array | Streaming histogram | accumulate | O(bins) | Memory independent of input size, which is what makes the plot viable over a dataset larger than RAM |
+| Reservoir (Algorithm R) | Scatter sampling | sample | O(k) space | Uniform sample from a stream of unknown length in one pass |
+
+The recurring theme is that every structure holding per-tweet state has a
+documented replacement at 10x, and every structure holding per-*bucket* or
+per-*bin* state is already constant in corpus size.
+
+---
+
+## 4B. Concurrency
+
+Three distinct workloads, each with a different correct answer:
+
+**Collection is I/O-bound and rate-limited.** `asyncio` with a semaphore
+bounded by the number of authenticated accounts. Adding workers beyond
+that does not help: parallel requests compete for the same per-account
+quota and exhaust it faster without raising throughput. This is the
+unusual case where the correct concurrency level is set by an external
+policy rather than by hardware.
+
+**Cleaning is CPU-bound and embarrassingly parallel.** `ProcessPoolExecutor`
+over chunks of raw JSONL. Unicode normalisation, regex entity extraction,
+and timestamp parsing are pure per-record work with no shared state, and a
+process pool sidesteps the GIL where a thread pool would not. Submission is
+windowed at `2 * workers` chunks so memory stays flat, and futures are
+drained in submission order so output is deterministic regardless of worker
+count.
+
+**Deduplication is inherently sequential and is left alone.** Whether a
+tweet is a near-duplicate depends on every tweet already admitted, so the
+LSH index is shared mutable state. Parallelising it would require a
+distributed index or a merge step that reintroduces the comparisons
+parallelism was supposed to avoid -- and would make the output depend on
+scheduling order.
+
+Run `python scripts/process.py --workers 1` for the sequential baseline. At
+the current corpus size the pool's startup cost is a meaningful fraction of
+total runtime, so the parallel path may not win outright; the crossover
+sits at a few tens of thousands of records, and the design is aimed at the
+regime past it.
+
+---
+
+## 4C. Anti-bot handling
+
+X's defences are layered, and each layer needs a different response:
+
+| Defence | Response |
+|---|---|
+| Per-account rate limits | Account pool with automatic rotation; block until reset rather than retrying into a wall |
+| TLS fingerprinting | `curl-cffi` backend, which mimics a real browser's TLS handshake rather than Python's default |
+| Request-pattern analysis | Randomised 0.5-1.5s inter-query delays; concurrency capped at the account count |
+| GraphQL operation ID rotation | Pluggable backend interface, so a DOM-based collector can take over without touching the collector |
+| Headless browser detection | Selenium backend uses `undetected_chromedriver` and runs non-headless by default |
+| Session-age heuristics | Persistent Chrome profile directory, so the session looks continuous across runs |
+
+The general posture is to look like a slow user rather than to defeat
+detection outright. Rate-limit waits are respected rather than circumvented
+-- collection is designed to take hours, and every checkpointing decision
+follows from accepting that rather than fighting it.
+
+---
+
+## 4D. Why not Selenium as the primary backend
+
+The specification suggests Selenium. Both approaches were implemented, and
+`twscrape` was chosen as the default for reasons worth stating, since the
+choice is not obvious:
+
+| | GraphQL (`twscrape`) | Selenium (DOM) |
+|---|---|---|
+| Throughput | ~300 tweets in seconds | ~300 tweets in minutes |
+| Engagement counts | Exact, typed | Abbreviated in DOM ("1.2K"), parsed approximately |
+| View counts | Available | Not exposed in DOM at all |
+| Entity extraction | Pre-parsed spans | Re-derived by regex from rendered text |
+| Timestamps | Exact ISO | Exact (from `<time datetime>`) |
+| Resource cost | One HTTP client | A Chrome process per worker |
+| Breaks when | Operation IDs rotate | DOM is restructured |
+
+The decisive factor is fidelity, not speed. The specification requires
+engagement metrics, and the DOM renders them abbreviated, so a
+DOM-primary pipeline would report approximate counts for every tweet above
+1,000 interactions and no view counts whatsoever. That degradation would
+propagate into the engagement weighting and therefore into every aggregate
+signal.
+
+`SeleniumBackend` is implemented and functional
+(`src/mkt_intel/scraper/selenium_backend.py`), behind the same
+`ScraperBackend` ABC. Because the two backends break for unrelated reasons,
+keeping both means no single upstream change stops collection -- which is
+the actual argument for writing the interface rather than picking one.
+
+---
+
 ## 5. Scaling to 10x
 
 The current corpus is 2,836 tweets. At roughly 30,000 the following bind:

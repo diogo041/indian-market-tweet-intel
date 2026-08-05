@@ -2,24 +2,24 @@
 
 ## Corpus
 
-- Tweets (deduplicated, 24h window): **2,836**
-- Unique authors: 1,549
+- Tweets (deduplicated, 24h window): **2,834**
+- Unique authors: 1,548
 - Mean lexicon polarity: +0.049
-- Tweets carrying a scoreable term: 39.2%
+- Tweets carrying a scoreable term: 39.1%
 - Promotional (tout) tweets: 0.9%
 
 ### Content classes
 
 | Class | Tweets |
 |---|---:|
-| discussion | 2,071 |
+| discussion | 2,069 |
 | mechanical | 386 |
 | earnings | 192 |
 | corporate_action | 187 |
 
 ## Signal series
 
-45 buckets total, 17 above the reliability floor (>=5 tweets and >=3 carrying a scoreable term).
+44 buckets total, 17 above the reliability floor (>=5 tweets and >=3 carrying a scoreable term).
 
 ![Signal series](figures/signal_series.png)
 
@@ -51,7 +51,7 @@
 |---|---:|---:|---:|---:|---:|---|
 | 15m | 16 | -0.226 | 0.400 | -0.389 | 0.137 | 68.8% [44%, 86%] |
 | 30m | 16 | -0.153 | 0.572 | -0.386 | 0.140 | 56.2% [33%, 77%] |
-| 60m | 16 | -0.025 | 0.927 | -0.163 | 0.545 | 81.2% [57%, 93%] |
+| 60m | 16 | -0.031 | 0.910 | -0.163 | 0.545 | 81.2% [57%, 93%] |
 
 **Interpretation.** No correlation reaches significance at the 5% level. Sample sizes here are very small -- a handful of buckets overlap NSE trading hours, because collection covered only part of one session -- so this analysis can detect a strong relationship but cannot rule out a modest one. Point estimates at these sample sizes are not evidence in either direction, and no lag or horizon search was performed, since that would manufacture significance without predictive content. Establishing whether the signal carries information requires collection across multiple sessions.
 
@@ -75,14 +75,14 @@ Largest-Triangle-Three-Buckets reduces 100,000 points to 500 (99.5% reduction) w
 | `sensex` | 0.0188 |
 | `cas` | 0.0182 |
 | `nse` | 0.0168 |
-| `market` | 0.0150 |
+| `market` | 0.0149 |
 | `nifty50` | 0.0135 |
 | `expiry` | 0.0132 |
-| `today` | 0.0126 |
+| `today` | 0.0127 |
 | `bse` | 0.0126 |
 | `trading` | 0.0125 |
 | `price` | 0.0115 |
-| `banknifty` | 0.0114 |
+| `banknifty` | 0.0115 |
 | `stockmarket` | 0.0111 |
 | `closing` | 0.0105 |
 | `sebi` | 0.0097 |

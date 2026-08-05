@@ -47,7 +47,11 @@ TERM_GROUPS: tuple[str, ...] = (
     "(nifty OR nifty50 OR #nifty50)",
     '(banknifty OR "bank nifty" OR #banknifty)',
     "(sensex OR #sensex OR NSE OR BSE)",
-    '(intraday OR "option chain" OR "share market" OR "stock market india")',
+    # #intraday is named explicitly in the specification and is given its
+    # own group rather than being folded into a broader query, so that its
+    # yield can be measured independently.
+    "(#intraday OR intraday OR scalping)",
+    '("option chain" OR "share market" OR "stock market india")',
     # Flow and expiry vocabulary: FII/DII positioning is closely tracked by
     # Indian retail accounts and generates its own distinct discussion.
     "(FII OR DII OR expiry OR #expiryday)",
