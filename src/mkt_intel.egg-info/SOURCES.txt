@@ -1,11 +1,14 @@
 README.md
 pyproject.toml
 src/mkt_intel/__init__.py
+src/mkt_intel/config.py
 src/mkt_intel.egg-info/PKG-INFO
 src/mkt_intel.egg-info/SOURCES.txt
 src/mkt_intel.egg-info/dependency_links.txt
 src/mkt_intel.egg-info/top_level.txt
 src/mkt_intel/processing/__init__.py
 src/mkt_intel/scraper/__init__.py
+src/mkt_intel/scraper/collector.py
+src/mkt_intel/scraper/query_planner.py
 src/mkt_intel/signals/__init__.py
 src/mkt_intel/viz/__init__.py

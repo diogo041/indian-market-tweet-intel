@@ -24,11 +24,13 @@ def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)-7s %(name)s | %(message)s",
-        handlers=[
+        handlers=[  
             logging.StreamHandler(),
             logging.FileHandler("logs/collect.log", encoding="utf-8"),
         ],
     )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
     accounts = load_accounts()
     queries = plan(hours_back=args.hours)
