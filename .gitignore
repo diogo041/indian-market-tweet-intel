@@ -1,11 +1,21 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
+
+# Secrets — auth tokens, session cookies
 .env
-accounts.db          # twscrape sessions — CONTAINS AUTH TOKENS
+accounts.db
+accounts.db-journal
+*.db-wal
+*.db-shm
 cookies.json
 chrome_profile/
+
+# Data — raw and processed are regenerable, samples are committed
 data/raw/
 data/processed/
-!data/samples/       # small committed sample only
+!data/samples/
+
+# Logs
 logs/
