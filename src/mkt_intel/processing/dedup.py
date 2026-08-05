@@ -41,7 +41,7 @@ class DedupStats:
 class Deduplicator:
     """Streaming deduplicator. Call `is_new` once per incoming tweet."""
 
-    def __init__(self, threshold: float = 0.85, num_perm: int = 64,
+    def __init__(self, threshold: float = 0.85, num_perm: int = 128,
                  shingle_size: int = 3) -> None:
         self._seen_ids: set[int] = set()
         self._lsh = MinHashLSH(threshold=threshold, num_perm=num_perm)
