@@ -269,11 +269,11 @@ removes real data silently.
 Three complementary views, since none suffices alone:
 
 1. **Lexicon polarity** -- interpretable and domain-specific, but sparse
-   (39.1% of tweets carry a scoreable term).
+   (39.2% of tweets carry a scoreable term).
 2. **TF-IDF** -- word 1-2 grams plus character 3-5 grams. Character
    n-grams matter more than usual here because Hinglish transliteration is
    inconsistent (`girawat`, `girawt`, `girawaat`) and word tokenisation
-   treats those as unrelated. Final matrix: 2,838 x 31,992 at 1.03%
+   treats those as unrelated. Final matrix: 2,836 x 31,990 at 1.03%
    density.
 3. **Engagement and authority** -- non-textual evidence about how much
    weight a view should carry.
@@ -404,7 +404,7 @@ from the full cloud at any realistic figure size.
 
 ## 5. Scaling to 10x
 
-The current corpus is 2,838 tweets. At roughly 30,000 the following bind:
+The current corpus is 2,836 tweets. At roughly 30,000 the following bind:
 
 | Component | Current | At 10x | Change needed |
 |---|---|---|---|

@@ -14,11 +14,11 @@ NIFTY 50 returns.
 
 | Metric | Value |
 |---|---|
-| Tweets collected (deduplicated, 24h window) | **2,838** |
+| Tweets collected (deduplicated, 24h window) | **2,836** |
 | Unique authors | 1,549 |
-| Tweets carrying a scoreable sentiment term | 39.1% |
-| 15-minute buckets (above reliability floor) | 46 (17) |
-| TF-IDF matrix | 2,838 x 31,992, 1.03% dense |
+| Tweets carrying a scoreable sentiment term | 39.2% |
+| 15-minute buckets (above reliability floor) | 45 (17) |
+| TF-IDF matrix | 2,836 x 31,990, 1.03% dense |
 | Storage compression (JSONL to Parquet+ZSTD) | 20.8x |
 
 Full results, including the signal series and validation tables, are in
